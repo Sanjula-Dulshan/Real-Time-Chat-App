@@ -1,4 +1,7 @@
 import User from "../models/user.model.js";
+import bcryptjs from "bcryptjs";
+import { getProfilePic } from "../utils/getProfilePic.js";
+import { generateTokenAndSetCookie } from "../utils/generateToken.js";
 
 export const signup = async (req, res) => {
   try {
@@ -14,17 +17,21 @@ export const signup = async (req, res) => {
       return res.status(400).json({ error: "username already exists" });
     }
 
-    const maleProfilePic = `https://avatar.iran.liara.run/public/boy?username=${username}`;
-    const femaleProfilePic = `https://avatar.iran.liara.run/public/girl?username=${username}`;
+    const profilePicture = getProfilePic(gender, username);
+
+    //Hash Password
+    const salt = await bcryptjs.genSalt(10);
+    const hashPassword = await bcryptjs.hash(password, salt);
 
     const newUser = new User({
       fullName,
       username,
-      password,
+      password: hashPassword,
       gender,
-      profilePicture: gender === "male" ? maleProfilePic : femaleProfilePic,
+      profilePicture,
     });
 
+    generateTokenAndSetCookie(newUser._id, res);
     await newUser.save();
 
     res.status(201).json({
